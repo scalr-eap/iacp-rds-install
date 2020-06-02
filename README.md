@@ -28,3 +28,4 @@ This template is configured as follows.
 1. Set your access keys for AWS using environment variables `export AWS_ACCESS_KEY_ID=<access_key> AWS_SECRET_ACCESS_KEY=<secret_key>`
 1. Run `terraform init;terraform apply` and watch the magic happen.
 
+Note: This represents the baseline configuration. It is up to you to add things like backup policies, autoscaling, etc to the configuration.
