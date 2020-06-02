@@ -20,7 +20,7 @@ This template is configured as follows.
 1. `region` - AWS Region to use.
 1. `key_name` - Key in AWS.
 1. `token` - Your packagecloud.io download token supplied with the license.
-1. `vpc` - VPC to be used.
+1. `vpc` - VPC to be used. Must have an associated internet gateway to enable egress from all subnets.
 1. `instance_type` - Must be 4GB ram. t3.medium recommended.
 1. `name_prefix` - 1-3 character prefix to be added to all instance names.
 1. Set your access keys for AWS using environment variables `export AWS_ACCESS_KEY_ID=<access_key> AWS_SECRET_ACCESS_KEY=<secret_key>`
