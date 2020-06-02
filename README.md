@@ -16,8 +16,6 @@ This template is configured as follows.
 1. Upload your public key to AWS.
 1. Copy your Scalr license to ./license/license.json in the repo
 1. Copy your private ssh key to ./ssh/id_rsa in the repo
-1. Copy your SSL Certificate to ./cert/my.crt
-1. Copy your SSL key to ./cert/my.key
 1. Set values for the following variables in terraform.tfvars(.json) or provide values on the command line at runtime
 1. `region` - AWS Region to use.
 1. `key_name` - Key in AWS.
