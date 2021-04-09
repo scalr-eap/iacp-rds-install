@@ -17,7 +17,7 @@ locals {
 }
 
 provider "aws" {
-    region     = var.region
+  region = var.region
 }
 
 #---------------
@@ -49,9 +49,9 @@ resource "null_resource" "fix_key" {
 # license
 
 resource "local_file" "license_file" {
-  count      = var.license == "FROM_FILE" ? 0 : 1
-  content    = var.license
-  filename   = local.license_file
+  count    = var.license == "FROM_FILE" ? 0 : 1
+  content  = var.license
+  filename = local.license_file
 }
 
 # SSL cert
@@ -114,60 +114,47 @@ data "aws_subnet_ids" "scalr_ids" {
 #
 
 resource "aws_instance" "iacp_server" {
-  count                   = var.server_count
-  depends_on              = [null_resource.fix_key, local_file.license_file, aws_db_instance.scalr_mysql, aws_lb.scalr_lb ]
-  ami                     = data.aws_ami.the_ami.id
-  instance_type           = var.instance_type
-  key_name                = var.ssh_key_name
-  vpc_security_group_ids  = [ data.aws_security_group.default_sg.id, aws_security_group.scalr_sg.id ]
-  subnet_id               = element(tolist(data.aws_subnet_ids.scalr_ids.ids),count.index)
+  #  depends_on             = [null_resource.fix_key, local_file.license_file, aws_db_instance.scalr_mysql, aws_lb.scalr_lb]
+  depends_on             = [null_resource.fix_key, local_file.license_file, aws_db_instance.scalr_mysql]
+  ami                    = data.aws_ami.the_ami.id
+  instance_type          = var.instance_type
+  key_name               = var.ssh_key_name
+  vpc_security_group_ids = [data.aws_security_group.default_sg.id, aws_security_group.scalr_sg.id]
+  subnet_id              = element(tolist(data.aws_subnet_ids.scalr_ids.ids), 0)
 
   tags = {
     Name = "${var.name_prefix}-iacp-server"
   }
 
   connection {
-        host	= self.public_ip
-        type     = "ssh"
-        user     = "ubuntu"
-        private_key = file(local.ssh_private_key_file)
-        timeout  = "20m"
+    host        = self.public_ip
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(local.ssh_private_key_file)
+    timeout     = "20m"
   }
 
   provisioner "file" {
-        source = local.license_file
-        destination = "/var/tmp/license.json"
+    source      = local.license_file
+    destination = "/var/tmp/license.json"
   }
 
   provisioner "file" {
-#        source = local.ssl_cert_file
-        content     = tls_self_signed_cert.scalr_cert.cert_pem
-        destination = "/var/tmp/my.crt"
-  }
-
- 
-  provisioner "file" {
-#        source = local.ssl_key_file
-        content     = tls_private_key.scalr_pk.private_key_pem
-        destination = "/var/tmp/my.key"
-  }
-
-  provisioner "file" {
-      source = "./SCRIPTS/scalr_install.sh"
-      destination = "/var/tmp/scalr_install.sh"
+    source      = "./SCRIPTS/scalr_install.sh"
+    destination = "/var/tmp/scalr_install.sh"
   }
 
 }
 
 resource "aws_ebs_volume" "iacp_vol" {
-  availability_zone = aws_instance.iacp_server.0.availability_zone
-  type = "gp2"
-  size = 50
+  availability_zone = aws_instance.iacp_server.availability_zone
+  type              = "gp2"
+  size              = 50
 }
 
 resource "aws_volume_attachment" "iacp_attach" {
   device_name = "/dev/sds"
-  instance_id = aws_instance.iacp_server.0.id
+  instance_id = aws_instance.iacp_server.id
   volume_id   = aws_ebs_volume.iacp_vol.id
 }
 
@@ -175,36 +162,46 @@ resource "null_resource" "null_1" {
   depends_on = [aws_instance.iacp_server]
 
   connection {
-        host	= aws_instance.iacp_server.0.public_ip
-        type     = "ssh"
-        user     = "ubuntu"
-        private_key = file(local.ssh_private_key_file)
-        timeout  = "20m"
+    host        = aws_instance.iacp_server.public_ip
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(local.ssh_private_key_file)
+    timeout     = "20m"
   }
 
+    provisioner "file" {
+        content     = tls_self_signed_cert.scalr_cert.cert_pem
+        destination = "/var/tmp/my.crt"
+  }
+
+   provisioner "file" {
+        content     = tls_private_key.scalr_pk.private_key_pem
+        destination = "/var/tmp/my.key"
+   }
+
   provisioner "remote-exec" {
-      inline = [
-        "chmod +x /var/tmp/scalr_install.sh",
-        "sudo /var/tmp/scalr_install.sh '${var.token}' ${aws_volume_attachment.iacp_attach.volume_id} ${aws_lb.scalr_lb.dns_name} ${aws_db_instance.scalr_mysql.address} ${random_password.mysql_pw.result}",
-      ]
+    inline = [
+      "chmod +x /var/tmp/scalr_install.sh",
+      "sudo /var/tmp/scalr_install.sh '${var.token}' ${aws_volume_attachment.iacp_attach.volume_id} ${aws_instance.iacp_server.public_dns} ${aws_db_instance.scalr_mysql.address} ${random_password.mysql_pw.result}",
+    ]
   }
 
 }
 
 resource "null_resource" "get_info" {
 
-  depends_on = [null_resource.null_1 ]
+  depends_on = [null_resource.null_1]
   connection {
-        host	= aws_instance.iacp_server.0.public_ip
-        type     = "ssh"
-        user     = "ubuntu"
-        private_key = file(local.ssh_private_key_file)
-        timeout  = "20m"
+    host        = aws_instance.iacp_server.public_ip
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(local.ssh_private_key_file)
+    timeout     = "20m"
   }
 
   provisioner "file" {
-      source = "./SCRIPTS/get_pass.sh"
-      destination = "/var/tmp/get_pass.sh"
+    source      = "./SCRIPTS/get_pass.sh"
+    destination = "/var/tmp/get_pass.sh"
 
   }
   provisioner "remote-exec" {
@@ -217,8 +214,8 @@ resource "null_resource" "get_info" {
 }
 
 output "dns_name" {
-  value = aws_lb.scalr_lb.dns_name
+  value = aws_instance.iacp_server.public_dns
 }
 output "scalr_iacp_server_public_ip" {
-  value = aws_instance.iacp_server.0.public_ip
+  value = aws_instance.iacp_server.public_ip
 }

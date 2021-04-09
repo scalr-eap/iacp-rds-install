@@ -1,7 +1,7 @@
 ## Default SG
 
 data "aws_security_group" "default_sg" {
-  name = "default"
+  name   = "default"
   vpc_id = var.vpc
 }
 
