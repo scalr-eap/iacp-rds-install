@@ -46,7 +46,7 @@ resource "null_resource" "fix_key" {
   }
 }
 
-# license
+# license - Store it in a local file
 
 resource "local_file" "license_file" {
   count    = var.license == "FROM_FILE" ? 0 : 1
@@ -54,13 +54,15 @@ resource "local_file" "license_file" {
   filename = local.license_file
 }
 
-# SSL cert
+# SSL cert - Store it in a local file
 
 resource "local_file" "ssl_cert" {
   count    = var.ssl_cert == "FROM_FILE" ? 0 : 1
   content  = var.ssl_cert
   filename = "./cert/temp_my.crt"
 }
+
+# This inelegant code takes the cert from the local file and turns it back into a properly formatted key with line breaks
 
 resource "null_resource" "fix_ssl_cert" {
   count      = var.ssl_cert == "FROM_FILE" ? 0 : 1
@@ -70,13 +72,15 @@ resource "null_resource" "fix_ssl_cert" {
   }
 }
 
-# SSL key
+# SSL key - to file
 
 resource "local_file" "ssl_key" {
   count    = var.ssl_key == "FROM_FILE" ? 0 : 1
   content  = var.ssl_key
   filename = "./cert/temp_my.key"
 }
+
+# This inelegant code takes the SSL Key from the local file and turns it back into a properly formatted key with line breaks
 
 resource "null_resource" "fix_ssl_key" {
   count      = var.ssl_cert == "FROM_FILE" ? 0 : 1
@@ -112,6 +116,7 @@ data "aws_subnet_ids" "scalr_ids" {
 #
 # Scalr Server
 #
+# Deploy the server and upload the license and install script
 
 resource "aws_instance" "iacp_server" {
   #  depends_on             = [null_resource.fix_key, local_file.license_file, aws_db_instance.scalr_mysql, aws_lb.scalr_lb]
@@ -146,6 +151,8 @@ resource "aws_instance" "iacp_server" {
 
 }
 
+# Add the volume to be used for /opt/scalr-server
+
 resource "aws_ebs_volume" "iacp_vol" {
   availability_zone = aws_instance.iacp_server.availability_zone
   type              = "gp2"
@@ -157,6 +164,8 @@ resource "aws_volume_attachment" "iacp_attach" {
   instance_id = aws_instance.iacp_server.id
   volume_id   = aws_ebs_volume.iacp_vol.id
 }
+
+# Upload the SSL cert/key and run the install script. Note the implied dependency on the RDS server.
 
 resource "null_resource" "null_1" {
   depends_on = [aws_instance.iacp_server]
@@ -187,6 +196,8 @@ resource "null_resource" "null_1" {
   }
 
 }
+
+# Run a script to display the admin password from scalr-server-secrets.json
 
 resource "null_resource" "get_info" {
 

@@ -43,6 +43,8 @@ apt-get install -y scalr-server
 STEP="scalr-server-wizard"
 scalr-server-wizard
 
+# Set the Mysql password from the password generated for RDS in rds.tf
+
 STEP="Set Mysql Password in secrets"
 sed 's/"scalr_password": .*,/"scalr_password": "'$MYSQL_PW'",/' /etc/scalr-server/scalr-server-secrets.json > /var/tmp/scalr-server-secrets.json
 cp /var/tmp/scalr-server-secrets.json /etc/scalr-server/scalr-server-secrets.json
@@ -94,8 +96,6 @@ app[:mysql_analytics_port] = 3306
 #  }
 #}
 !
-
-# Conditional because MySQL Master wont have it's local file yet
 
 STEP="Create License"
 cp /var/tmp/license.json /etc/scalr-server/license.json
